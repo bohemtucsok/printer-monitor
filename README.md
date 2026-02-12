@@ -1,7 +1,6 @@
 # Printer Monitor (OctoPrint / Repetier 3D Printer Monitor)
 
-**Fork of [Qrome/printer-monitor](https://github.com/Qrome/printer-monitor)** by David Payne.
-The original project's last release was V2.5 (February 2019), and the last commit was in April 2021. Since the project appears to be unmaintained, this fork continues development with new features and improvements.
+This project is based on [Qrome/printer-monitor](https://github.com/Qrome/printer-monitor) by David Payne. As the original repository has not seen updates for some time, this fork aims to continue the work by adding new features and improvements while building on the solid foundation of the original project.
 
 ## What's New in This Fork
 
