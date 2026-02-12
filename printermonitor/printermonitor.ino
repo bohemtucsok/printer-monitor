@@ -74,8 +74,8 @@ OverlayCallback overlays[] = { drawHeaderOverlay };
 OverlayCallback clockOverlay[] = { drawClockHeaderOverlay };
 int numberOfOverlays = 1;
 
-// Time 
-TimeClient timeClient(UtcOffset);
+// Time
+TimeClient timeClient(TimeZone);
 long lastEpoch = 0;
 long firstEpoch = 0;
 long displayOffEpoch = 0;
@@ -93,7 +93,7 @@ boolean displayOn = true;
 int printerCount = 0;
 
 // Weather Client
-OpenWeatherMapClient weatherClient(WeatherApiKey, CityIDs, 1, IS_METRIC, WeatherLanguage);
+OpenWeatherMapClient weatherClient(WeatherCity, WeatherLat, WeatherLon, IS_METRIC);
 
 //declairing prototypes
 void configModeCallback (WiFiManager *myWiFiManager);
@@ -120,56 +120,30 @@ static const char CLOCK_FORM[] PROGMEM = "<hr><p><input name='isClockEnabled' cl
                       "<p>Clock Sync / Weather Refresh (minutes) <select class='w3-option w3-padding' name='refresh'>%OPTIONS%</select></p>";
                             
 static const char THEME_FORM[] PROGMEM =   "<p>Theme Color <select class='w3-option w3-padding' name='theme'>%THEME_OPTIONS%</select></p>"
-                      "<p><label>UTC Time Offset</label><input class='w3-input w3-border w3-margin-bottom' type='text' name='utcoffset' value='%UTCOFFSET%' maxlength='12'></p><hr>"
+                      "<p>Timezone <select class='w3-option w3-padding' name='timezone'>%TIMEZONE_OPTIONS%</select></p><hr>"
                       "<p><input name='isBasicAuth' class='w3-check w3-margin-top' type='checkbox' %IS_BASICAUTH_CHECKED%> Use Security Credentials for Configuration Changes</p>"
                       "<p><label>User ID (for this interface)</label><input class='w3-input w3-border w3-margin-bottom' type='text' name='userid' value='%USERID%' maxlength='20'></p>"
                       "<p><label>Password </label><input class='w3-input w3-border w3-margin-bottom' type='password' name='stationpassword' value='%STATIONPASSWORD%'></p>"
                       "<button class='w3-button w3-block w3-grey w3-section w3-padding' type='submit'>Save</button></form>";
 
 static const char WEATHER_FORM[] PROGMEM = "<form class='w3-container' action='/updateweatherconfig' method='get'><h2>Weather Config:</h2>"
+                      "<p>Uses <a href='https://open-meteo.com/' target='_BLANK'>Open-Meteo API</a> (free, no API key needed)</p>"
                       "<p><input name='isWeatherEnabled' class='w3-check w3-margin-top' type='checkbox' %IS_WEATHER_CHECKED%> Display Weather when printer is off</p>"
-                      "<label>OpenWeatherMap API Key (get from <a href='https://openweathermap.org/' target='_BLANK'>here</a>)</label>"
-                      "<input class='w3-input w3-border w3-margin-bottom' type='text' name='openWeatherMapApiKey' value='%WEATHERKEY%' maxlength='60'>"
-                      "<p><label>%CITYNAME1% (<a href='http://openweathermap.org/find' target='_BLANK'><i class='fa fa-search'></i> Search for City ID</a>) "
-                      "<input class='w3-input w3-border w3-margin-bottom' type='text' name='city1' value='%CITY1%' onkeypress='return isNumberKey(event)'></p>"
+                      "<p><label>City Name (for display)</label>"
+                      "<input class='w3-input w3-border w3-margin-bottom' type='text' name='weatherCity' value='%WEATHERCITY%' maxlength='60'></p>"
+                      "<p><label>Latitude (<a href='https://www.latlong.net/' target='_BLANK'><i class='fa fa-search'></i> Find coordinates</a>)</label>"
+                      "<input class='w3-input w3-border w3-margin-bottom' type='text' name='weatherLat' value='%WEATHERLAT%' maxlength='20'></p>"
+                      "<p><label>Longitude</label>"
+                      "<input class='w3-input w3-border w3-margin-bottom' type='text' name='weatherLon' value='%WEATHERLON%' maxlength='20'></p>"
                       "<p><input name='metric' class='w3-check w3-margin-top' type='checkbox' %METRIC%> Use Metric (Celsius)</p>"
-                      "<p>Weather Language <select class='w3-option w3-padding' name='language'>%LANGUAGEOPTIONS%</select></p>"
-                      "<button class='w3-button w3-block w3-grey w3-section w3-padding' type='submit'>Save</button></form>"
-                      "<script>function isNumberKey(e){var h=e.which?e.which:event.keyCode;return!(h>31&&(h<48||h>57))}</script>";
-
-static const char LANG_OPTIONS[] PROGMEM = "<option>ar</option>"
-                      "<option>bg</option>"
-                      "<option>ca</option>"
-                      "<option>cz</option>"
-                      "<option>de</option>"
-                      "<option>el</option>"
-                      "<option>en</option>"
-                      "<option>fa</option>"
-                      "<option>fi</option>"
-                      "<option>fr</option>"
-                      "<option>gl</option>"
-                      "<option>hr</option>"
-                      "<option>hu</option>"
-                      "<option>it</option>"
-                      "<option>ja</option>"
-                      "<option>kr</option>"
-                      "<option>la</option>"
-                      "<option>lt</option>"
-                      "<option>mk</option>"
-                      "<option>nl</option>"
-                      "<option>pl</option>"
-                      "<option>pt</option>"
-                      "<option>ro</option>"
-                      "<option>ru</option>"
-                      "<option>se</option>"
-                      "<option>sk</option>"
-                      "<option>sl</option>"
-                      "<option>es</option>"
-                      "<option>tr</option>"
-                      "<option>ua</option>"
-                      "<option>vi</option>"
-                      "<option>zh_cn</option>"
-                      "<option>zh_tw</option>";
+                      "<p><label>Weather Language</label><select class='w3-select w3-border w3-margin-bottom' name='weatherLang'>"
+                      "<option value='en' %LANG_EN%>English</option>"
+                      "<option value='hu' %LANG_HU%>Magyar</option>"
+                      "<option value='de' %LANG_DE%>Deutsch</option>"
+                      "<option value='fr' %LANG_FR%>Fran&ccedil;ais</option>"
+                      "<option value='es' %LANG_ES%>Espa&ntilde;ol</option>"
+                      "</select></p>"
+                      "<button class='w3-button w3-block w3-grey w3-section w3-padding' type='submit'>Save</button></form>";
 
 static const char COLOR_THEMES[] PROGMEM = "<option>red</option>"
                       "<option>pink</option>"
@@ -194,6 +168,108 @@ static const char COLOR_THEMES[] PROGMEM = "<option>red</option>"
                       "<option>dark-grey</option>"
                       "<option>black</option>"
                       "<option>w3schools</option>";
+
+// Timezone names (display labels) - must match TIMEZONE_POSIX order
+static const char TIMEZONE_OPTIONS[] PROGMEM =
+  "<option value='0'>UTC-12:00 Baker Island</option>"
+  "<option value='1'>UTC-11:00 Pago Pago</option>"
+  "<option value='2'>UTC-10:00 Hawaii</option>"
+  "<option value='3'>UTC-09:00 Alaska</option>"
+  "<option value='4'>UTC-08:00 Pacific (US/Canada)</option>"
+  "<option value='5'>UTC-07:00 Mountain (US/Canada)</option>"
+  "<option value='6'>UTC-07:00 Arizona (no DST)</option>"
+  "<option value='7'>UTC-06:00 Central (US/Canada)</option>"
+  "<option value='8'>UTC-05:00 Eastern (US/Canada)</option>"
+  "<option value='9'>UTC-04:00 Atlantic (Canada)</option>"
+  "<option value='10'>UTC-03:30 Newfoundland</option>"
+  "<option value='11'>UTC-03:00 Buenos Aires, Sao Paulo</option>"
+  "<option value='12'>UTC-01:00 Azores</option>"
+  "<option value='13'>UTC+00:00 London, Dublin (GMT/BST)</option>"
+  "<option value='14'>UTC+00:00 UTC (no DST)</option>"
+  "<option value='15'>UTC+01:00 Budapest, Berlin (CET/CEST)</option>"
+  "<option value='16'>UTC+02:00 Helsinki, Bucharest (EET/EEST)</option>"
+  "<option value='17'>UTC+02:00 Cairo (no DST)</option>"
+  "<option value='18'>UTC+03:00 Moscow, Istanbul</option>"
+  "<option value='19'>UTC+04:00 Dubai, Baku</option>"
+  "<option value='20'>UTC+05:00 Karachi, Tashkent</option>"
+  "<option value='21'>UTC+05:30 Mumbai, Kolkata</option>"
+  "<option value='22'>UTC+06:00 Dhaka, Almaty</option>"
+  "<option value='23'>UTC+07:00 Bangkok, Jakarta</option>"
+  "<option value='24'>UTC+08:00 Singapore, Beijing</option>"
+  "<option value='25'>UTC+09:00 Tokyo, Seoul</option>"
+  "<option value='26'>UTC+09:30 Adelaide</option>"
+  "<option value='27'>UTC+10:00 Sydney, Melbourne</option>"
+  "<option value='28'>UTC+10:00 Brisbane (no DST)</option>"
+  "<option value='29'>UTC+12:00 Auckland</option>";
+
+// POSIX timezone strings - index must match TIMEZONE_OPTIONS values
+const char* const TZ_POSIX[] = {
+  "<+12>12",                              // 0  Baker Island
+  "<+11>11",                              // 1  Pago Pago
+  "HST10",                                // 2  Hawaii
+  "AKST9AKDT,M3.2.0,M11.1.0",            // 3  Alaska
+  "PST8PDT,M3.2.0,M11.1.0",              // 4  Pacific
+  "MST7MDT,M3.2.0,M11.1.0",              // 5  Mountain
+  "MST7",                                 // 6  Arizona
+  "CST6CDT,M3.2.0,M11.1.0",              // 7  Central
+  "EST5EDT,M3.2.0,M11.1.0",              // 8  Eastern
+  "AST4ADT,M3.2.0,M11.1.0",              // 9  Atlantic
+  "NST3:30NDT,M3.2.0,M11.1.0",           // 10 Newfoundland
+  "<-03>3",                               // 11 Buenos Aires
+  "<-01>1<+00>,M3.5.0/0,M10.5.0/1",      // 12 Azores
+  "GMT0BST,M3.5.0/1,M10.5.0",            // 13 London
+  "UTC0",                                 // 14 UTC
+  "CET-1CEST,M3.5.0,M10.5.0/3",          // 15 Budapest/Berlin
+  "EET-2EEST,M3.5.0/3,M10.5.0/4",        // 16 Helsinki/Bucharest
+  "EET-2",                                // 17 Cairo
+  "<+03>-3",                              // 18 Moscow/Istanbul
+  "<+04>-4",                              // 19 Dubai
+  "<+05>-5",                              // 20 Karachi
+  "<+0530>-5:30",                         // 21 Mumbai
+  "<+06>-6",                              // 22 Dhaka
+  "<+07>-7",                              // 23 Bangkok
+  "<+08>-8",                              // 24 Singapore/Beijing
+  "JST-9",                                // 25 Tokyo
+  "ACST-9:30ACDT,M10.1.0,M4.1.0/3",      // 26 Adelaide
+  "AEST-10AEDT,M10.1.0,M4.1.0/3",        // 27 Sydney
+  "AEST-10",                              // 28 Brisbane
+  "NZST-12NZDT,M9.5.0,M4.1.0/3"          // 29 Auckland
+};
+const int TZ_COUNT = 30;
+
+// Timezone display names - index must match TIMEZONE_OPTIONS values
+const char* const TZ_NAMES[] = {
+  "UTC-12:00 Baker Island",
+  "UTC-11:00 Pago Pago",
+  "UTC-10:00 Hawaii",
+  "UTC-09:00 Alaska",
+  "UTC-08:00 Pacific (US/Canada)",
+  "UTC-07:00 Mountain (US/Canada)",
+  "UTC-07:00 Arizona (no DST)",
+  "UTC-06:00 Central (US/Canada)",
+  "UTC-05:00 Eastern (US/Canada)",
+  "UTC-04:00 Atlantic (Canada)",
+  "UTC-03:30 Newfoundland",
+  "UTC-03:00 Buenos Aires, Sao Paulo",
+  "UTC-01:00 Azores",
+  "UTC+00:00 London, Dublin (GMT/BST)",
+  "UTC+00:00 UTC (no DST)",
+  "UTC+01:00 Budapest, Berlin (CET/CEST)",
+  "UTC+02:00 Helsinki, Bucharest (EET/EEST)",
+  "UTC+02:00 Cairo (no DST)",
+  "UTC+03:00 Moscow, Istanbul",
+  "UTC+04:00 Dubai, Baku",
+  "UTC+05:00 Karachi, Tashkent",
+  "UTC+05:30 Mumbai, Kolkata",
+  "UTC+06:00 Dhaka, Almaty",
+  "UTC+07:00 Bangkok, Jakarta",
+  "UTC+08:00 Singapore, Beijing",
+  "UTC+09:00 Tokyo, Seoul",
+  "UTC+09:30 Adelaide",
+  "UTC+10:00 Sydney, Melbourne",
+  "UTC+10:00 Brisbane (no DST)",
+  "UTC+12:00 Auckland"
+};
                             
 
 void setup() {  
@@ -254,6 +330,8 @@ void setup() {
   // SLIDE_LEFT, SLIDE_RIGHT, SLIDE_TOP, SLIDE_DOWN
   ui.setFrameAnimation(SLIDE_LEFT);
   ui.setTargetFPS(30);
+  ui.setTimePerTransition(300);
+  ui.setTimePerFrame(15000);
   ui.disableAllIndicators();
   ui.setFrames(frames, (numberOfFrames));
   frames[0] = drawScreen1;
@@ -369,27 +447,34 @@ void findMDNS() {
 // Main Loop
 //************************************************************
 void loop() {
-  
-   //Get Time Update
-  if((getMinutesFromLastRefresh() >= minutesBetweenDataRefresh) || lastEpoch == 0) {
+
+  // Skip network calls during frame transitions to prevent display stuttering
+  boolean canDoNetwork = (ui.getUiState()->frameState == FIXED);
+
+  //Get Time Update
+  if (lastEpoch == 0) {
+    getUpdateTime(); // First boot: always sync immediately
+  } else if (canDoNetwork && getMinutesFromLastRefresh() >= minutesBetweenDataRefresh) {
     getUpdateTime();
   }
 
-  if (lastMinute != timeClient.getMinutes() && !printerClient.isPrinting()) {
-    // Check status every 60 seconds
-    ledOnOff(true);
-    lastMinute = timeClient.getMinutes(); // reset the check value
-    printerClient.getPrinterJobResults();
-    printerClient.getPrinterPsuState();
-    ledOnOff(false);
-  } else if (printerClient.isPrinting()) {
-    if (lastSecond != timeClient.getSeconds() && timeClient.getSeconds().endsWith("0")) {
-      lastSecond = timeClient.getSeconds();
-      // every 10 seconds while printing get an update
+  if (canDoNetwork) {
+    if (lastMinute != timeClient.getMinutes() && !printerClient.isPrinting()) {
+      // Check status every 60 seconds
       ledOnOff(true);
+      lastMinute = timeClient.getMinutes(); // reset the check value
       printerClient.getPrinterJobResults();
       printerClient.getPrinterPsuState();
       ledOnOff(false);
+    } else if (printerClient.isPrinting()) {
+      if (lastSecond != timeClient.getSeconds() && timeClient.getSeconds().endsWith("0")) {
+        lastSecond = timeClient.getSeconds();
+        // every 10 seconds while printing get an update
+        ledOnOff(true);
+        printerClient.getPrinterJobResults();
+        printerClient.getPrinterPsuState();
+        ledOnOff(false);
+      }
     }
   }
 
@@ -446,10 +531,11 @@ void handleUpdateWeather() {
     return server.requestAuthentication();
   }
   DISPLAYWEATHER = server.hasArg("isWeatherEnabled");
-  WeatherApiKey = server.arg("openWeatherMapApiKey");
-  CityIDs[0] = server.arg("city1").toInt();
+  WeatherCity = server.arg("weatherCity");
+  WeatherLat = server.arg("weatherLat");
+  WeatherLon = server.arg("weatherLon");
   IS_METRIC = server.hasArg("metric");
-  WeatherLanguage = server.arg("language");
+  WeatherLanguage = server.arg("weatherLang");
   writeSettings();
   isClockOn = false; // this will force a check for the display
   checkDisplay();
@@ -478,7 +564,11 @@ void handleUpdateConfig() {
   HAS_PSU = server.hasArg("hasPSU");
   minutesBetweenDataRefresh = server.arg("refresh").toInt();
   themeColor = server.arg("theme");
-  UtcOffset = server.arg("utcoffset").toFloat();
+  int tzIndex = server.arg("timezone").toInt();
+  if (tzIndex >= 0 && tzIndex < TZ_COUNT) {
+    TimeZone = String(TZ_POSIX[tzIndex]);
+    TimeZoneName = String(TZ_NAMES[tzIndex]);
+  }
   String temp = server.arg("userid");
   temp.toCharArray(www_username, sizeof(temp));
   temp = server.arg("stationpassword");
@@ -532,17 +622,19 @@ void handleWeatherConfigure() {
     isWeatherChecked = "checked='checked'";
   }
   form.replace("%IS_WEATHER_CHECKED%", isWeatherChecked);
-  form.replace("%WEATHERKEY%", WeatherApiKey);
-  form.replace("%CITYNAME1%", weatherClient.getCity(0));
-  form.replace("%CITY1%", String(CityIDs[0]));
+  form.replace("%WEATHERCITY%", WeatherCity);
+  form.replace("%WEATHERLAT%", WeatherLat);
+  form.replace("%WEATHERLON%", WeatherLon);
   String checked = "";
   if (IS_METRIC) {
     checked = "checked='checked'";
   }
   form.replace("%METRIC%", checked);
-  String options = FPSTR(LANG_OPTIONS);
-  options.replace(">"+String(WeatherLanguage)+"<", " selected>"+String(WeatherLanguage)+"<");
-  form.replace("%LANGUAGEOPTIONS%", options);
+  form.replace("%LANG_EN%", (WeatherLanguage == "en") ? "selected" : "");
+  form.replace("%LANG_HU%", (WeatherLanguage == "hu") ? "selected" : "");
+  form.replace("%LANG_DE%", (WeatherLanguage == "de") ? "selected" : "");
+  form.replace("%LANG_FR%", (WeatherLanguage == "fr") ? "selected" : "");
+  form.replace("%LANG_ES%", (WeatherLanguage == "es") ? "selected" : "");
   server.sendContent(form);
   
   html = getFooter();
@@ -656,11 +748,21 @@ void handleConfigure() {
   server.sendContent(form);
 
   form = FPSTR(THEME_FORM);
-  
+
   String themeOptions = FPSTR(COLOR_THEMES);
   themeOptions.replace(">"+String(themeColor)+"<", " selected>"+String(themeColor)+"<");
   form.replace("%THEME_OPTIONS%", themeOptions);
-  form.replace("%UTCOFFSET%", String(UtcOffset));
+
+  // Build timezone dropdown with current selection
+  String tzOptions = FPSTR(TIMEZONE_OPTIONS);
+  // Find current timezone index by matching POSIX string
+  for (int i = 0; i < TZ_COUNT; i++) {
+    if (String(TZ_POSIX[i]) == TimeZone) {
+      tzOptions.replace("value='" + String(i) + "'", "value='" + String(i) + "' selected");
+      break;
+    }
+  }
+  form.replace("%TIMEZONE_OPTIONS%", tzOptions);
   String isUseSecurityChecked = "";
   if (IS_BASIC_AUTH) {
     isUseSecurityChecked = "checked='checked'";
@@ -838,14 +940,13 @@ void displayPrinterStatus() {
   
   if (DISPLAYWEATHER) {
     if (weatherClient.getCity(0) == "") {
-      html += "<p>Please <a href='/configureweather'>Configure Weather</a> API</p>";
+      html += "<p>Please <a href='/configureweather'>Configure Weather</a> settings</p>";
       if (weatherClient.getError() != "") {
         html += "<p>Weather Error: <strong>" + weatherClient.getError() + "</strong></p>";
       }
     } else {
-      html += "<div class='w3-cell-row' style='width:100%'><h2>" + weatherClient.getCity(0) + ", " + weatherClient.getCountry(0) + "</h2></div><div class='w3-cell-row'>";
+      html += "<div class='w3-cell-row' style='width:100%'><h2>" + weatherClient.getCity(0) + "</h2></div><div class='w3-cell-row'>";
       html += "<div class='w3-cell w3-left w3-medium' style='width:120px'>";
-      html += "<img src='http://openweathermap.org/img/w/" + weatherClient.getIcon(0) + ".png' alt='" + weatherClient.getDescription(0) + "'><br>";
       html += weatherClient.getHumidity(0) + "% Humidity<br>";
       html += weatherClient.getWind(0) + " <span class='w3-tiny'>" + getSpeedSymbol() + "</span> Wind<br>";
       html += "</div>";
@@ -1120,7 +1221,8 @@ void writeSettings() {
     Serial.println("File open failed!");
   } else {
     Serial.println("Saving settings now...");
-    f.println("UtcOffset=" + String(UtcOffset));
+    f.println("TimeZone=" + TimeZone);
+    f.println("TimeZoneName=" + TimeZoneName);
     f.println("printerApiKey=" + PrinterApiKey);
     f.println("printerHostName=" + PrinterHostName);
     f.println("printerServer=" + PrinterServer);
@@ -1138,15 +1240,16 @@ void writeSettings() {
     f.println("invertDisp=" + String(INVERT_DISPLAY));
     f.println("USE_FLASH=" + String(USE_FLASH));
     f.println("isWeather=" + String(DISPLAYWEATHER));
-    f.println("weatherKey=" + WeatherApiKey);
-    f.println("CityID=" + String(CityIDs[0]));
+    f.println("weatherCity=" + WeatherCity);
+    f.println("weatherLat=" + WeatherLat);
+    f.println("weatherLon=" + WeatherLon);
     f.println("isMetric=" + String(IS_METRIC));
-    f.println("language=" + String(WeatherLanguage));
+    f.println("weatherLang=" + WeatherLanguage);
     f.println("hasPSU=" + String(HAS_PSU));
   }
   f.close();
   readSettings();
-  timeClient.setUtcOffset(UtcOffset);
+  timeClient.setTimezone(TimeZone);
 }
 
 void readSettings() {
@@ -1160,9 +1263,14 @@ void readSettings() {
   while(fr.available()) {
     line = fr.readStringUntil('\n');
 
-    if (line.indexOf("UtcOffset=") >= 0) {
-      UtcOffset = line.substring(line.lastIndexOf("UtcOffset=") + 10).toFloat();
-      Serial.println("UtcOffset=" + String(UtcOffset));
+    if (line.indexOf("TimeZoneName=") >= 0) {
+      TimeZoneName = line.substring(line.lastIndexOf("TimeZoneName=") + 13);
+      TimeZoneName.trim();
+      Serial.println("TimeZoneName=" + TimeZoneName);
+    } else if (line.indexOf("TimeZone=") >= 0) {
+      TimeZone = line.substring(line.lastIndexOf("TimeZone=") + 9);
+      TimeZone.trim();
+      Serial.println("TimeZone=" + TimeZone);
     }
     if (line.indexOf("printerApiKey=") >= 0) {
       PrinterApiKey = line.substring(line.lastIndexOf("printerApiKey=") + 14);
@@ -1248,32 +1356,37 @@ void readSettings() {
       DISPLAYWEATHER = line.substring(line.lastIndexOf("isWeather=") + 10).toInt();
       Serial.println("DISPLAYWEATHER=" + String(DISPLAYWEATHER));
     }
-    if (line.indexOf("weatherKey=") >= 0) {
-      WeatherApiKey = line.substring(line.lastIndexOf("weatherKey=") + 11);
-      WeatherApiKey.trim();
-      Serial.println("WeatherApiKey=" + WeatherApiKey);
+    if (line.indexOf("weatherCity=") >= 0) {
+      WeatherCity = line.substring(line.lastIndexOf("weatherCity=") + 12);
+      WeatherCity.trim();
+      Serial.println("WeatherCity=" + WeatherCity);
     }
-    if (line.indexOf("CityID=") >= 0) {
-      CityIDs[0] = line.substring(line.lastIndexOf("CityID=") + 7).toInt();
-      Serial.println("CityID: " + String(CityIDs[0]));
+    if (line.indexOf("weatherLat=") >= 0) {
+      WeatherLat = line.substring(line.lastIndexOf("weatherLat=") + 11);
+      WeatherLat.trim();
+      Serial.println("WeatherLat=" + WeatherLat);
+    }
+    if (line.indexOf("weatherLon=") >= 0) {
+      WeatherLon = line.substring(line.lastIndexOf("weatherLon=") + 11);
+      WeatherLon.trim();
+      Serial.println("WeatherLon=" + WeatherLon);
     }
     if (line.indexOf("isMetric=") >= 0) {
       IS_METRIC = line.substring(line.lastIndexOf("isMetric=") + 9).toInt();
       Serial.println("IS_METRIC=" + String(IS_METRIC));
     }
-    if (line.indexOf("language=") >= 0) {
-      WeatherLanguage = line.substring(line.lastIndexOf("language=") + 9);
+    if (line.indexOf("weatherLang=") >= 0) {
+      WeatherLanguage = line.substring(line.lastIndexOf("weatherLang=") + 12);
       WeatherLanguage.trim();
       Serial.println("WeatherLanguage=" + WeatherLanguage);
     }
   }
   fr.close();
   printerClient.updatePrintClient(PrinterApiKey, PrinterServer, PrinterPort, PrinterAuthUser, PrinterAuthPass, HAS_PSU);
-  weatherClient.updateWeatherApiKey(WeatherApiKey);
-  weatherClient.updateLanguage(WeatherLanguage);
+  weatherClient.updateLocation(WeatherCity, WeatherLat, WeatherLon);
   weatherClient.setMetric(IS_METRIC);
-  weatherClient.updateCityIdList(CityIDs, 1);
-  timeClient.setUtcOffset(UtcOffset);
+  weatherClient.setLanguage(WeatherLanguage);
+  timeClient.setTimezone(TimeZone);
 }
 
 int getMinutesFromLastRefresh() {

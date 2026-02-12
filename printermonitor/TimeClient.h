@@ -25,29 +25,25 @@ See more at http://blog.squix.ch
 
 /*
 Modified by David Payne for use in the Scrolling Marquee
+Modified to use NTP with POSIX timezone for automatic DST handling
 */
 
 #pragma once
 
 #include <ESP8266WiFi.h>
-
-#define NTP_PACKET_SIZE 48
+#include <time.h>
 
 class TimeClient {
 
   private:
-    float myUtcOffset = 0;
-    long localEpoc = 0;
-    long localMillisAtUpdate;
-    const char* ntpServerName = "www.google.com";
-    const int httpPort = 80;    
-    byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
+    String myTimeZone;
+    boolean timeSynced = false;
 
   public:
-    TimeClient(float utcOffset);
+    TimeClient(String timeZone);
     void updateTime();
-    
-    void setUtcOffset(float utcOffset);
+
+    void setTimezone(String timeZone);
     String getHours();
     String getAmPmHours();
     String getAmPm();
@@ -59,4 +55,3 @@ class TimeClient {
     long getCurrentEpochWithUtcOffset();
 
 };
-

@@ -21,146 +21,249 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+// Modified to use Open-Meteo API (free, no API key required)
+// https://open-meteo.com/
+
 #include "OpenWeatherMapClient.h"
 
-OpenWeatherMapClient::OpenWeatherMapClient(String ApiKey, int CityIDs[], int cityCount, boolean isMetric, String language) {
-  updateCityIdList(CityIDs, cityCount);
-  updateLanguage(language);
-  myApiKey = ApiKey;
+OpenWeatherMapClient::OpenWeatherMapClient(String city, String lat, String lon, boolean isMetric) {
+  myCity = city;
+  myLat = lat;
+  myLon = lon;
   setMetric(isMetric);
 }
 
-void OpenWeatherMapClient::updateWeatherApiKey(String ApiKey) {
-  myApiKey = ApiKey;
-}
-
-void OpenWeatherMapClient::updateLanguage(String language) {
-  lang = language;
-  if (lang == "") {
-    lang = "en";
-  }
-}
-
-void OpenWeatherMapClient::updateWeather() {
-  WiFiClient weatherClient;
-  String apiGetData = "GET /data/2.5/group?id=" + myCityIDs + "&units=" + units + "&cnt=1&APPID=" + myApiKey + "&lang=" + lang + " HTTP/1.1";
-
-  Serial.println("Getting Weather Data");
-  Serial.println(apiGetData);
-  result = "";
-  if (weatherClient.connect(servername, 80)) {  //starts client connection, checks for connection
-    weatherClient.println(apiGetData);
-    weatherClient.println("Host: " + String(servername));
-    weatherClient.println("User-Agent: ArduinoWiFi/1.1");
-    weatherClient.println("Connection: close");
-    weatherClient.println();
-  } 
-  else {
-    Serial.println("connection for weather data failed"); //error message if no client connect
-    Serial.println();
-    return;
-  }
-
-  while(weatherClient.connected() && !weatherClient.available()) delay(1); //waits for data
- 
-  Serial.println("Waiting for data");
-
-  // Check HTTP status
-  char status[32] = {0};
-  weatherClient.readBytesUntil('\r', status, sizeof(status));
-  Serial.println("Response Header: " + String(status));
-  if (strcmp(status, "HTTP/1.1 200 OK") != 0) {
-    Serial.print(F("Unexpected response: "));
-    Serial.println(status);
-    return;
-  }
-
-    // Skip HTTP headers
-  char endOfHeaders[] = "\r\n\r\n";
-  if (!weatherClient.find(endOfHeaders)) {
-    Serial.println(F("Invalid response"));
-    return;
-  }
-
-  const size_t bufferSize = 710;
-  DynamicJsonBuffer jsonBuffer(bufferSize);
-
-  weathers[0].cached = false;
-  weathers[0].error = "";
-  // Parse JSON object
-  JsonObject& root = jsonBuffer.parseObject(weatherClient);
-  if (!root.success()) {
-    Serial.println(F("Weather Data Parsing failed!"));
-    weathers[0].error = "Weather Data Parsing failed!";
-    return;
-  }
-
-  weatherClient.stop(); //stop client
-
-  if (root.measureLength() <= 150) {
-    Serial.println("Error Does not look like we got the data.  Size: " + String(root.measureLength()));
-    weathers[0].cached = true;
-    weathers[0].error = (const char*)root["message"];
-    Serial.println("Error: " + weathers[0].error);
-    return;
-  }
-  int count = root["cnt"];
-
-  for (int inx = 0; inx < count; inx++) {
-    weathers[inx].lat = (const char*)root["list"][inx]["coord"]["lat"];
-    weathers[inx].lon = (const char*)root["list"][inx]["coord"]["lon"];
-    weathers[inx].dt = (const char*)root["list"][inx]["dt"];
-    weathers[inx].city = (const char*)root["list"][inx]["name"];
-    weathers[inx].country = (const char*)root["list"][inx]["sys"]["country"];
-    weathers[inx].temp = (const char*)root["list"][inx]["main"]["temp"];
-    weathers[inx].humidity = (const char*)root["list"][inx]["main"]["humidity"];
-    weathers[inx].condition = (const char*)root["list"][inx]["weather"][0]["main"];
-    weathers[inx].wind = (const char*)root["list"][inx]["wind"]["speed"];
-    weathers[inx].weatherId = (const char*)root["list"][inx]["weather"][0]["id"];
-    weathers[inx].description = (const char*)root["list"][inx]["weather"][0]["description"];
-    weathers[inx].icon = (const char*)root["list"][inx]["weather"][0]["icon"];
-
-    Serial.println("lat: " + weathers[inx].lat);
-    Serial.println("lon: " + weathers[inx].lon);
-    Serial.println("dt: " + weathers[inx].dt);
-    Serial.println("city: " + weathers[inx].city);
-    Serial.println("country: " + weathers[inx].country);
-    Serial.println("temp: " + weathers[inx].temp);
-    Serial.println("humidity: " + weathers[inx].humidity);
-    Serial.println("condition: " + weathers[inx].condition);
-    Serial.println("wind: " + weathers[inx].wind);
-    Serial.println("weatherId: " + weathers[inx].weatherId);
-    Serial.println("description: " + weathers[inx].description);
-    Serial.println("icon: " + weathers[inx].icon);
-    Serial.println();
-    
-  }
-}
-
-String OpenWeatherMapClient::roundValue(String value) {
-  float f = value.toFloat();
-  int rounded = (int)(f+0.5f);
-  return String(rounded);
-}
-
-void OpenWeatherMapClient::updateCityIdList(int CityIDs[], int cityCount) {
-  myCityIDs = "";
-  for (int inx = 0; inx < cityCount; inx++) {
-    if (CityIDs[inx] > 0) {
-      if (myCityIDs != "") {
-        myCityIDs = myCityIDs + ",";
-      }
-      myCityIDs = myCityIDs + String(CityIDs[inx]); 
-    }
-  }
+void OpenWeatherMapClient::updateLocation(String city, String lat, String lon) {
+  myCity = city;
+  myLat = lat;
+  myLon = lon;
 }
 
 void OpenWeatherMapClient::setMetric(boolean isMetric) {
   if (isMetric) {
-    units = "metric";
+    units = "celsius";
   } else {
-    units = "imperial";
+    units = "fahrenheit";
   }
+}
+
+void OpenWeatherMapClient::setLanguage(String lang) {
+  myLang = lang;
+}
+
+int OpenWeatherMapClient::getLangIndex() {
+  if (myLang == "hu") return 1;
+  if (myLang == "de") return 2;
+  if (myLang == "fr") return 3;
+  if (myLang == "es") return 4;
+  return 0; // en
+}
+
+// Translation tables: [language][index]
+// Languages: 0=en, 1=hu, 2=de, 3=fr, 4=es
+// Conditions: 12 entries (short names for OLED display)
+static const char* const condStrings[5][12] = {
+  {"Clear", "Mostly Clear", "Partly Cloudy", "Overcast", "Fog", "Drizzle", "Rain", "Snow", "Showers", "Snow Showers", "Thunderstorm", "Unknown"},
+  {"Derult", "Tobb. derult", "Reszben felhos", "Borult", "Kodos", "Szitalas", "Eso", "Havazas", "Zapor", "Hozapor", "Zivatar", "Ismeretlen"},
+  {"Klar", "Uberw. klar", "Teilw. bewolkt", "Bedeckt", "Nebel", "Nieselregen", "Regen", "Schnee", "Schauer", "Schneeschauer", "Gewitter", "Unbekannt"},
+  {"Degage", "Princ. degage", "Part. nuageux", "Couvert", "Brouillard", "Bruine", "Pluie", "Neige", "Averses", "Averses neige", "Orage", "Inconnu"},
+  {"Despejado", "Mayor. despej.", "Parc. nublado", "Nublado", "Niebla", "Llovizna", "Lluvia", "Nieve", "Chubascos", "Chub. de nieve", "Tormenta", "Desconocido"}
+};
+
+// Descriptions: 29 entries (longer text for web display)
+static const char* const descStrings[5][29] = {
+  // English
+  {"Clear sky", "Mainly clear", "Partly cloudy", "Overcast", "Fog", "Depositing rime fog",
+   "Light drizzle", "Moderate drizzle", "Dense drizzle", "Light freezing drizzle", "Dense freezing drizzle",
+   "Slight rain", "Moderate rain", "Heavy rain", "Light freezing rain", "Heavy freezing rain",
+   "Slight snow fall", "Moderate snow fall", "Heavy snow fall", "Snow grains",
+   "Slight rain showers", "Moderate rain showers", "Violent rain showers",
+   "Slight snow showers", "Heavy snow showers",
+   "Thunderstorm", "Thunderstorm with slight hail", "Thunderstorm with heavy hail", "Unknown"},
+  // Hungarian
+  {"Tiszta egbolt", "Tobbnyire derult", "Reszben felhos", "Borult", "Kod", "Zuzmaras kod",
+   "Enyhe szitalas", "Mersekelt szitalas", "Suru szitalas", "Enyhe onos szitalas", "Suru onos szitalas",
+   "Gyenge eso", "Mersekelt eso", "Eros eso", "Enyhe onos eso", "Eros onos eso",
+   "Gyenge havazas", "Mersekelt havazas", "Eros havazas", "Hoszemcsek",
+   "Gyenge zapor", "Mersekelt zapor", "Heves zapor",
+   "Gyenge hozapor", "Eros hozapor",
+   "Zivatar", "Zivatar gyenge jegesovel", "Zivatar eros jegesovel", "Ismeretlen"},
+  // German
+  {"Klarer Himmel", "Uberwiegend klar", "Teilweise bewolkt", "Bedeckt", "Nebel", "Reifnebel",
+   "Leichter Nieselregen", "Massiger Nieselregen", "Starker Nieselregen", "Leichter gefr. Nieselregen", "Starker gefr. Nieselregen",
+   "Leichter Regen", "Massiger Regen", "Starker Regen", "Leichter gefr. Regen", "Starker gefr. Regen",
+   "Leichter Schneefall", "Massiger Schneefall", "Starker Schneefall", "Schneekorner",
+   "Leichte Regenschauer", "Massige Regenschauer", "Heftige Regenschauer",
+   "Leichte Schneeschauer", "Starke Schneeschauer",
+   "Gewitter", "Gewitter mit leichtem Hagel", "Gewitter mit starkem Hagel", "Unbekannt"},
+  // French
+  {"Ciel degage", "Principalement degage", "Partiellement nuageux", "Couvert", "Brouillard", "Brouillard givrant",
+   "Bruine legere", "Bruine moderee", "Bruine dense", "Bruine verglacante legere", "Bruine verglacante dense",
+   "Pluie legere", "Pluie moderee", "Forte pluie", "Pluie verglacante legere", "Forte pluie verglacante",
+   "Legeres chutes de neige", "Chutes de neige moderees", "Fortes chutes de neige", "Grains de neige",
+   "Legeres averses", "Averses moderees", "Averses violentes",
+   "Legeres averses de neige", "Fortes averses de neige",
+   "Orage", "Orage avec grele legere", "Orage avec forte grele", "Inconnu"},
+  // Spanish
+  {"Cielo despejado", "Mayormente despejado", "Parcialmente nublado", "Nublado", "Niebla", "Niebla con escarcha",
+   "Llovizna ligera", "Llovizna moderada", "Llovizna densa", "Llovizna helada ligera", "Llovizna helada densa",
+   "Lluvia ligera", "Lluvia moderada", "Lluvia intensa", "Lluvia helada ligera", "Lluvia helada intensa",
+   "Nevada ligera", "Nevada moderada", "Nevada intensa", "Granos de nieve",
+   "Chubascos ligeros", "Chubascos moderados", "Chubascos violentos",
+   "Chubascos de nieve ligeros", "Chubascos de nieve intensos",
+   "Tormenta", "Tormenta con granizo ligero", "Tormenta con granizo intenso", "Desconocido"}
+};
+
+void OpenWeatherMapClient::updateWeather() {
+  WiFiClient client;
+  HTTPClient http;
+
+  // Build Open-Meteo API URL
+  String windUnit = "kmh";
+  if (units == "fahrenheit") {
+    windUnit = "mph";
+  }
+  String url = "http://api.open-meteo.com/v1/forecast?latitude=" + myLat + "&longitude=" + myLon
+    + "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
+    + "&temperature_unit=" + units
+    + "&wind_speed_unit=" + windUnit;
+
+  Serial.println("Getting Weather Data from Open-Meteo");
+  Serial.println(url);
+  result = "";
+
+  http.begin(client, url);
+  int httpCode = http.GET();
+
+  if (httpCode != HTTP_CODE_OK) {
+    Serial.println("HTTP error: " + String(httpCode));
+    weathers[0].error = "HTTP Error: " + String(httpCode);
+    http.end();
+    return;
+  }
+
+  String payload = http.getString();
+  http.end();
+
+  Serial.println("Response length: " + String(payload.length()));
+
+  const size_t bufferSize = 1024;
+  DynamicJsonBuffer jsonBuffer(bufferSize);
+
+  weathers[0].cached = false;
+  weathers[0].error = "";
+
+  // Parse JSON object
+  JsonObject& root = jsonBuffer.parseObject(payload);
+  if (!root.success()) {
+    Serial.println(F("Weather Data Parsing failed!"));
+    Serial.println("Response: " + payload.substring(0, 200));
+    weathers[0].error = "Weather Data Parsing failed!";
+    return;
+  }
+
+  // Open-Meteo response structure:
+  // { "current": { "time": "...", "temperature_2m": 5.9, "relative_humidity_2m": 97, "weather_code": 3, "wind_speed_10m": 10.1 } }
+
+  if (!root.containsKey("current")) {
+    Serial.println("Error: no current data in response");
+    weathers[0].cached = true;
+    weathers[0].error = "No current weather data";
+    if (root.containsKey("reason")) {
+      weathers[0].error = (const char*)root["reason"];
+    }
+    return;
+  }
+
+  float temp = root["current"]["temperature_2m"];
+  int humidity = root["current"]["relative_humidity_2m"];
+  int weatherCode = root["current"]["weather_code"];
+  float windSpeed = root["current"]["wind_speed_10m"];
+
+  weathers[0].lat = myLat;
+  weathers[0].lon = myLon;
+  weathers[0].dt = (const char*)root["current"]["time"];
+  weathers[0].city = myCity;
+  weathers[0].country = "";
+  weathers[0].temp = String(temp);
+  weathers[0].humidity = String(humidity);
+  weathers[0].condition = wmoToCondition(weatherCode);
+  weathers[0].wind = String(windSpeed);
+  weathers[0].weatherId = String(weatherCode);
+  weathers[0].description = wmoToDescription(weatherCode);
+  weathers[0].icon = "";
+
+  Serial.println("lat: " + weathers[0].lat);
+  Serial.println("lon: " + weathers[0].lon);
+  Serial.println("city: " + weathers[0].city);
+  Serial.println("temp: " + weathers[0].temp);
+  Serial.println("humidity: " + weathers[0].humidity);
+  Serial.println("condition: " + weathers[0].condition);
+  Serial.println("wind: " + weathers[0].wind);
+  Serial.println("weatherCode: " + weathers[0].weatherId);
+  Serial.println("description: " + weathers[0].description);
+  Serial.println();
+}
+
+// Map WMO weather codes to condition index (0-11)
+String OpenWeatherMapClient::wmoToCondition(int code) {
+  int idx;
+  if (code == 0) idx = 0;
+  else if (code == 1) idx = 1;
+  else if (code == 2) idx = 2;
+  else if (code == 3) idx = 3;
+  else if (code == 45 || code == 48) idx = 4;
+  else if (code >= 51 && code <= 57) idx = 5;
+  else if (code >= 61 && code <= 67) idx = 6;
+  else if (code >= 71 && code <= 77) idx = 7;
+  else if (code >= 80 && code <= 82) idx = 8;
+  else if (code >= 85 && code <= 86) idx = 9;
+  else if (code >= 95 && code <= 99) idx = 10;
+  else idx = 11;
+  return String(condStrings[getLangIndex()][idx]);
+}
+
+// Map WMO weather codes to description index (0-28)
+String OpenWeatherMapClient::wmoToDescription(int code) {
+  int idx;
+  switch (code) {
+    case 0: idx = 0; break;
+    case 1: idx = 1; break;
+    case 2: idx = 2; break;
+    case 3: idx = 3; break;
+    case 45: idx = 4; break;
+    case 48: idx = 5; break;
+    case 51: idx = 6; break;
+    case 53: idx = 7; break;
+    case 55: idx = 8; break;
+    case 56: idx = 9; break;
+    case 57: idx = 10; break;
+    case 61: idx = 11; break;
+    case 63: idx = 12; break;
+    case 65: idx = 13; break;
+    case 66: idx = 14; break;
+    case 67: idx = 15; break;
+    case 71: idx = 16; break;
+    case 73: idx = 17; break;
+    case 75: idx = 18; break;
+    case 77: idx = 19; break;
+    case 80: idx = 20; break;
+    case 81: idx = 21; break;
+    case 82: idx = 22; break;
+    case 85: idx = 23; break;
+    case 86: idx = 24; break;
+    case 95: idx = 25; break;
+    case 96: idx = 26; break;
+    case 99: idx = 27; break;
+    default: idx = 28; break;
+  }
+  return String(descStrings[getLangIndex()][idx]);
+}
+
+String OpenWeatherMapClient::roundValue(String value) {
+  float f = value.toFloat();
+  int rounded = (int)(f + 0.5f);
+  return String(rounded);
 }
 
 String OpenWeatherMapClient::getWeatherResults() {
@@ -231,81 +334,26 @@ boolean OpenWeatherMapClient::getCached() {
   return weathers[0].cached;
 }
 
-String OpenWeatherMapClient::getMyCityIDs() {
-  return myCityIDs;
-}
-
 String OpenWeatherMapClient::getError() {
   return weathers[0].error;
 }
 
-String OpenWeatherMapClient::getWeatherIcon(int index)
-{
-  int id = getWeatherId(index).toInt();
-  String W = ")";
-  switch(id)
-  {
-    case 800: W = "B"; break;
-    case 801: W = "Y"; break;
-    case 802: W = "H"; break;
-    case 803: W = "H"; break;
-    case 804: W = "Y"; break;
-    
-    case 200: W = "0"; break;
-    case 201: W = "0"; break;
-    case 202: W = "0"; break;
-    case 210: W = "0"; break;
-    case 211: W = "0"; break;
-    case 212: W = "0"; break;
-    case 221: W = "0"; break;
-    case 230: W = "0"; break;
-    case 231: W = "0"; break;
-    case 232: W = "0"; break;
-    
-    case 300: W = "R"; break;
-    case 301: W = "R"; break;
-    case 302: W = "R"; break;
-    case 310: W = "R"; break;
-    case 311: W = "R"; break;
-    case 312: W = "R"; break;
-    case 313: W = "R"; break;
-    case 314: W = "R"; break;
-    case 321: W = "R"; break;
-    
-    case 500: W = "R"; break;
-    case 501: W = "R"; break;
-    case 502: W = "R"; break;
-    case 503: W = "R"; break;
-    case 504: W = "R"; break;
-    case 511: W = "R"; break;
-    case 520: W = "R"; break;
-    case 521: W = "R"; break;
-    case 522: W = "R"; break;
-    case 531: W = "R"; break;
-    
-    case 600: W = "W"; break;
-    case 601: W = "W"; break;
-    case 602: W = "W"; break;
-    case 611: W = "W"; break;
-    case 612: W = "W"; break;
-    case 615: W = "W"; break;
-    case 616: W = "W"; break;
-    case 620: W = "W"; break;
-    case 621: W = "W"; break;
-    case 622: W = "W"; break;
-    
-    case 701: W = "M"; break;
-    case 711: W = "M"; break;
-    case 721: W = "M"; break;
-    case 731: W = "M"; break;
-    case 741: W = "M"; break;
-    case 751: W = "M"; break;
-    case 761: W = "M"; break;
-    case 762: W = "M"; break;
-    case 771: W = "M"; break;
-    case 781: W = "M"; break;
-    
-    default:break; 
-  }
+// Map WMO weather codes to Meteocons font characters
+String OpenWeatherMapClient::getWeatherIcon(int index) {
+  int code = getWeatherId(index).toInt();
+  String W = ")"; // default: N/A
+
+  if (code == 0) W = "B";             // Clear sky -> Sun
+  else if (code == 1) W = "B";        // Mainly clear -> Sun
+  else if (code == 2) W = "H";        // Partly cloudy -> Cloudy
+  else if (code == 3) W = "Y";        // Overcast -> Mostly cloudy
+  else if (code == 45 || code == 48) W = "M"; // Fog
+  else if (code >= 51 && code <= 57) W = "R"; // Drizzle -> Rain
+  else if (code >= 61 && code <= 67) W = "R"; // Rain
+  else if (code >= 71 && code <= 77) W = "W"; // Snow
+  else if (code >= 80 && code <= 82) W = "R"; // Rain showers
+  else if (code >= 85 && code <= 86) W = "W"; // Snow showers
+  else if (code >= 95 && code <= 99) W = "0"; // Thunderstorm
+
   return W;
 }

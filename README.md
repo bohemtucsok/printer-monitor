@@ -1,12 +1,32 @@
-# Printer Monitor (OctoPrint 3D Printer Monitor)
+# Printer Monitor (OctoPrint / Repetier 3D Printer Monitor)
 
-## New Easy Monitor Board Kit:
-Now available is the Pre Loaded Monitor Board Kit that comes ready to plug and play on your network.  
-* Kit on Etsy: https://www.etsy.com/listing/823257424  
-* New 3D printed case design for Monitor Board kit: https://www.thingiverse.com/thing:4538747
-* Configuration video: https://www.youtube.com/watch?v=kcBspqWhpIU
+**Fork of [Qrome/printer-monitor](https://github.com/Qrome/printer-monitor)** by David Payne.
+The original project's last release was V2.5 (February 2019), and the last commit was in April 2021. Since the project appears to be unmaintained, this fork continues development with new features and improvements.
 
-## Features:
+## What's New in This Fork
+
+### Open-Meteo Weather API (replaces OpenWeatherMap)
+The original project required an OpenWeatherMap API key for weather display. This fork replaces it with [Open-Meteo](https://open-meteo.com/) -- a free, open-source weather API that requires **no API key**. Just enter your city name and GPS coordinates in the web interface.
+
+### Automatic Timezone with DST Support
+The manual UTC offset input has been replaced with a **timezone region dropdown** (30+ regions). The ESP8266 uses NTP time synchronization with POSIX timezone rules, so **daylight saving time is handled automatically** -- no more manual clock adjustments twice a year.
+
+### Multi-Language Weather Display
+Weather conditions on the OLED display and web interface are now available in **5 languages**:
+- English, Hungarian, German, French, Spanish
+- Selectable from the web interface weather settings
+
+### Display Improvements
+- Fixed frame transition stuttering caused by blocking network calls during OLED animations
+- Network operations are now deferred until frame transitions complete
+- Configurable frame display time (default: 15 seconds per screen)
+
+### Technical Improvements
+- Uses `ESP8266HTTPClient` for reliable HTTP communication (handles chunked transfer encoding)
+- NTP-based time synchronization instead of HTTP header parsing
+- Increased JSON parse buffer for reliable weather data handling
+
+## Features
 * Displays the print status from OctoPrint or Repetier Server
 * Option to display time and weather when printer is idle
 * Estimated time remaining
@@ -18,84 +38,81 @@ Now available is the Pre Loaded Monitor Board Kit that comes ready to plug and p
 * Screen turns on when printer is Operational or connected
 * Option to display a clock screen instead of sleep mode
 * Option to display 24 hour clock or AM/PM style
-* Option to display Current Weather when printer is off
+* Option to display Current Weather when printer is off (no API key needed)
 * Sample rate is every 60 seconds when not printing
 * Sample rate is every 10 seconds when printing
 * Fully configurable from the web interface (not required to update Settings.h)
 * Supports OTA (loading firmware over WiFi connection on same LAN)
 * Basic Authentication to protect your settings
-* Version 2.2 added the ability to update firmware through web interface from a compiled binary
+* Update firmware through web interface from a compiled binary
 * Can query the Octoprint [PSU Control plugin](https://plugins.octoprint.org/plugins/psucontrol/) to enter clock or blank mode when PSU is off
-* Repetier support added in version 3.0 -- define in Settings.h
-* Video: https://youtu.be/niRv9SCgAPk
-* Detailed build video by Chris Riley: https://youtu.be/Rm-l1FSuJpI
+* Repetier support -- define in Settings.h
 
-## Required Parts:
+## Required Parts
 * Wemos D1 Mini: https://amzn.to/2ImqD1n
-* 0.96" OLED I2C 128x64 Display (12864) SSD1306:  https://amzn.to/3cyJekU
-* (optional) 1.3" I2C OLED Display: https://amzn.to/2IP0gRU (must uncomment #define DISPLAY_SH1106 in the Settings.h to use the 1.3" SSH1106 display)  
-* (optional) Pre loaded Monitor Board kit: https://www.etsy.com/listing/823257424  
-
-Note: Using the links provided here help to support these types of projects. Thank you for the support.  
+* 0.96" OLED I2C 128x64 Display (12864) SSD1306: https://amzn.to/3cyJekU
+* (optional) 1.3" I2C OLED Display: https://amzn.to/2IP0gRU (must uncomment `#define DISPLAY_SH1106` in Settings.h)
 
 ## Wiring for the Wemos D1 Mini to the I2C SSD1306 OLED
-SDA -> D2  
-SCL -> D5 / D1 -- for Easy Monitor Board
-VCC -> 5V+  
-GND -> GND-  
+SDA -> D2
+SCL -> D5 / D1 (D1 for Easy Monitor Board)
+VCC -> 5V+
+GND -> GND-
 
-![Printer Monitor Wire Diagram](/images/printer_monitor_wiring.jpg)  
+![Printer Monitor Wire Diagram](/images/printer_monitor_wiring.jpg)
 
-## 3D Printed Case by Qrome:  
-https://www.thingiverse.com/thing:2884823 -- for the 0.96" OLED Display  
-https://www.thingiverse.com/thing:2934049 -- for the 1.3" OLED Display  
-https://www.thingiverse.com/thing:4538747 -- for 0.96" With Easy Monitor Board
+## 3D Printed Case by Qrome
+https://www.thingiverse.com/thing:2884823 -- for the 0.96" OLED Display
+https://www.thingiverse.com/thing:2934049 -- for the 1.3" OLED Display
 
-## Upgrading from version 2.2 or Higher
-Version 2.2 introduced the ability to upgrade pre-compiled firmware from a binary file.  In version 2.3 and on you should find binary files that can be uploaded to your printer monitor via the web interface.  From the main menu in the web interface select "Firmware Update" and follow the prompts.
-* **printermonitor.ino.d1_mini_SSD1306.bin** - compiled for Wemos D1 Mini for the smaller 0.96" SSD1306 OLED (default)
-* **printermonitor.ino.d1_mini_SH1106.bin** - compiled for Wemos D1 Mini for the larger 1.3" SH1106 OLED
-* **printermonitor.ino.d1_mini_repetier_SSD1306.bin** - Repetier version compiled for Wemos D1 Mini for the smaller 0.96" SSD1306 OLED (default)
-* **printermonitor.ino.d1_mini_repetier_SH1106.bin** - Repetier version compiled for Wemos D1 Mini for the larger 1.3" SH1106 OLED
-* **printermonitor.ino.d1_mini_easyboard.bin** - Version compiled for Easy Monitor Board for the smaller 0.96" SSD1306 OLED (SDA -> D2 and SCL -> D1) 
-* **printermonitor.ino.d1_mini_easyboard_repetier.bin** - Repetier version compiled for Easy Monitor Board for the smaller 0.96" SSD1306 OLED (SDA -> D2 and SCL -> D1)
+## Firmware Update (Pre-compiled Binaries)
+You can upload pre-compiled firmware from the web interface: Main Menu -> "Firmware Update".
+
+| Binary | Hardware | Display | Server |
+|--------|----------|---------|--------|
+| `printermonitor.ino.d1_mini_SSD1306.bin` | Wemos D1 Mini | 0.96" SSD1306 | OctoPrint |
+| `printermonitor.ino.d1_mini_SH1106.bin` | Wemos D1 Mini | 1.3" SH1106 | OctoPrint |
+| `printermonitor.ino.d1_mini_repetier_SSD1306.bin` | Wemos D1 Mini | 0.96" SSD1306 | Repetier |
+| `printermonitor.ino.d1_mini_repetier_SH1106.bin` | Wemos D1 Mini | 1.3" SH1106 | Repetier |
+| `printermonitor.ino.d1_mini_easyboard.bin` | Easy Monitor Board | 0.96" SSD1306 | OctoPrint |
+| `printermonitor.ino.d1_mini_easyboard_repetier.bin` | Easy Monitor Board | 0.96" SSD1306 | Repetier |
 
 ## Compiling and Loading to Wemos D1 Mini
-It is recommended to use Arduino IDE.  You will need to configure Arduino IDE to work with the Wemos board and USB port and installed the required USB drivers etc.  
-* USB CH340G drivers:  https://sparks.gogo.co.nz/ch340.html
-* Enter http://arduino.esp8266.com/stable/package_esp8266com_index.json into Additional Board Manager URLs field. You can add multiple URLs, separating them with commas.  This will add support for the Wemos D1 Mini to Arduino IDE.
+It is recommended to use Arduino IDE. You will need to configure Arduino IDE to work with the Wemos board and USB port and install the required USB drivers.
+* USB CH340G drivers: https://sparks.gogo.co.nz/ch340.html
+* Enter `http://arduino.esp8266.com/stable/package_esp8266com_index.json` into Additional Board Manager URLs field.
 * Open Boards Manager from Tools > Board menu and install esp8266 Core platform version 2.5.2
-* Select Board:  "LOLIN(WEMOS) D1 R2 & mini"
+* Select Board: "LOLIN(WEMOS) D1 R2 & mini"
 * Set 1M SPIFFS -- this project uses SPIFFS for saving and reading configuration settings.
 
 ## Loading Supporting Library Files in Arduino
-Use the Arduino guide for details on how to installing and manage libraries https://www.arduino.cc/en/Guide/Libraries  
-**Packages** -- the following packages and libraries are used (download and install):  
-ESP8266WiFi.h  
-ESP8266WebServer.h  
-WiFiManager.h --> https://github.com/tzapu/WiFiManager  
-ESP8266mDNS.h  
-ArduinoOTA.h  --> Arduino OTA Library  
-"SSD1306Wire.h" --> https://github.com/ThingPulse/esp8266-oled-ssd1306/releases/tag/4.1.0  (version 4.1.0)  
-"OLEDDisplayUi.h"  
+Use the Arduino guide for details on how to install and manage libraries: https://www.arduino.cc/en/Guide/Libraries
 
-Note Printer-Monitor version 2.5 and later include ArduinoJson (version 5.13.1).   
+**Packages** -- the following packages and libraries are used (download and install):
+* `ESP8266WiFi.h`
+* `ESP8266WebServer.h`
+* `ESP8266HTTPClient.h`
+* `WiFiManager.h` --> https://github.com/tzapu/WiFiManager
+* `ESP8266mDNS.h`
+* `ArduinoOTA.h` --> Arduino OTA Library
+* `SSD1306Wire.h` --> https://github.com/ThingPulse/esp8266-oled-ssd1306/releases/tag/4.1.0 (version 4.1.0)
+* `OLEDDisplayUi.h`
+
+Note: ArduinoJson (version 5.13.1) is included in the project.
 
 ## Initial Configuration
-All settings may be managed from the Web Interface, however, you may update the **Settings.h** file manually -- but it is not required.  There is also an option to display current weather when the print is off-line.  
-* If you are using the Easy Monitor Board you must set the const int SCL_PIN = D1 in the Settings.h file.
-* By default OctoPrint client is selected.  If you wish to use Repetier then uncomment //#define USE_REPETIER_CLIENT in the Settings.h file.
-* Your OctoPrint API Key from your OctoPrint -> User Settings -> Current API Key  -- similar for Repetier API Key.
-* Optional OpenWeatherMap API Key -- if you want current weather when not printing.  Get the api key from: https://openweathermap.org/  
+All settings may be managed from the Web Interface, however, you may update the **Settings.h** file manually -- but it is not required.
+* If you are using the Easy Monitor Board you must set `const int SCL_PIN = D1` in Settings.h.
+* By default OctoPrint client is selected. If you wish to use Repetier then uncomment `//#define USE_REPETIER_CLIENT` in Settings.h.
+* Your OctoPrint API Key from OctoPrint -> User Settings -> Current API Key (similar for Repetier API Key).
+* Weather is powered by Open-Meteo (free, no API key needed). Just enter your city name and GPS coordinates.
 
-NOTE: The settings in the Settings.h are the default settings for the first loading. After loading you will manage changes to the settings via the Web Interface. If you want to change settings again in the settings.h, you will need to erase the file system on the Wemos or use the “Reset Settings” option in the Web Interface.  
+NOTE: The settings in Settings.h are the default settings for the first loading. After loading you will manage changes via the Web Interface. If you want to change settings again in Settings.h, you will need to erase the file system on the Wemos or use the "Reset Settings" option in the Web Interface.
 
 ## Web Interface
-The Printer Monitor uses the **WiFiManager** so when it can't find the last network it was connected to 
-it will become a **AP Hotspot** -- connect to it with your phone and you can then enter your WiFi connection information.
+The Printer Monitor uses **WiFiManager** so when it can't find the last network it was connected to, it will become an **AP Hotspot** -- connect to it with your phone and you can then enter your WiFi connection information.
 
-After connected to your WiFi network it will display the IP addressed assigned to it and that can be 
-used to open a browser to the Web Interface.  **Everything** can be configured there.
+After connecting to your WiFi network it will display the IP address assigned to it, which can be used to open a browser to the Web Interface. **Everything** can be configured there.
 
 <p align="center">
   <img src="/images/shot_01.png" width="200"/>
@@ -104,30 +121,19 @@ used to open a browser to the Web Interface.  **Everything** can be configured t
   <img src="/images/shot_04.png" width="200"/>
 </p>
 
-## Donate or Tip
-Please do not feel obligated, but donations and tips are warmly welcomed.  I have added the donation button at the request of a few people that wanted to contribute and show appreciation.  Thank you, and enjoy the application and project.  
+## Original Project
+This is a fork of [Qrome/printer-monitor](https://github.com/Qrome/printer-monitor) created by David Payne.
+The original project is licensed under the MIT License.
 
-[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=6VPMTLASLSKWE)
+### Original Contributors
+* David Payne -- Principal developer and architect
+* Daniel Eichhorn -- Author of the TimeClient class and OLEDDisplayUi
+* Florian Schutte -- added flip display to web interface
+* Owen Carter -- Added PSU control setting
 
-Or -- you can buy me something from my Amazon Wishlist: https://www.amazon.com/hz/wishlist/ls/GINC2PHRNEY3  
+## License
 
-## Contributors
-David Payne -- Principal developer and architect  
-Daniel Eichhorn -- Author of the TimeClient class and OLEDDisplayUi  
-Florian Schütte -- added flip display to web interface  
-Owen Carter -- Added psu control setting (v2.4) 
-
-Contributing to this software is warmly welcomed. You can do this basically by
-forking from master, committing modifications and then making a pulling requests to be reviewed (follow the links above
-for operating guide).  Detailed comments are encouraged.  Adding change log and your contact into file header is encouraged.
-Thanks for your contribution.
-
-[![Watch the video](/images/video_print_monitor.png)](https://youtu.be/niRv9SCgAPk)
-![Printer Monitor Temps](/images/temperatures.jpg)  
-![Printer Monitor Time Remaining](/images/time_remaining.jpg)  
-![Printer Monitor Printing Time](/images/printing_time.jpg)
-
-/* The MIT License (MIT)
+The MIT License (MIT)
 
 Copyright (c) 2018 David Payne
 
@@ -148,4 +154,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-*/
